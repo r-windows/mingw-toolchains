@@ -9,8 +9,6 @@ _threads="posix"
 _realname=gcc
 pkgbase=mingw-w64-${_realname}
 pkgname=("${MINGW_PACKAGE_PREFIX}-${_realname}"
-         "${MINGW_PACKAGE_PREFIX}-${_realname}-libs"
-         "${MINGW_PACKAGE_PREFIX}-${_realname}-libgfortran"
          "${MINGW_PACKAGE_PREFIX}-${_realname}-fortran"
         )
 pkgver=12.2.0
@@ -264,25 +262,6 @@ build() {
   make DESTDIR=${srcdir} install
 }
 
-package_gcc-libs() {
-  pkgdesc="GNU Compiler Collection (libraries) for MinGW-w64"
-  depends=("${MINGW_PACKAGE_PREFIX}-libwinpthread")
-  provides=("${MINGW_PACKAGE_PREFIX}-omp")
-
-  # Licensing information
-
-  # Part of the package is GCCRLE, part is LGPL2+, see README generation below.
-  # Since the packaged GCCRLE libraries are also GPL3+, and LGPL2+ is compatible
-  # with GPL3+, the whole package can be redistributed under GPL3+.
-  license=(GPL3+ partial:'GCCRLE' partial:'LGPL2+')
-
-  # We explain the licensing in this generated README file
-  mkdir -p "${pkgdir}${MINGW_PREFIX}/share/licenses/${_realname}-libs"
-  install -Dm644 "${srcdir}/${_sourcedir}/COPYING3"        "${pkgdir}${MINGW_PREFIX}/share/licenses/${_realname}-libs/COPYING3"
-  install -Dm644 "${srcdir}/${_sourcedir}/COPYING.LIB"     "${pkgdir}${MINGW_PREFIX}/share/licenses/${_realname}-libs/COPYING.LIB"
-  install -Dm644 "${srcdir}/${_sourcedir}/COPYING.RUNTIME" "${pkgdir}${MINGW_PREFIX}/share/licenses/${_realname}-libs/COPYING.RUNTIME"
-}
-
 package_gcc() {
   pkgdesc="GNU Compiler Collection (C,C++,OpenMP) for MinGW-w64"
   depends=("${MINGW_PACKAGE_PREFIX}-binutils"
@@ -388,12 +367,6 @@ package_gcc() {
   # install "custom" system gdbinit
   install -D -m644 ${srcdir}/gdbinit ${pkgdir}${MINGW_PREFIX}/etc/gdbinit
   sed -i 's|%GCC_NAME%|gcc-'${pkgver%%+*}'|g' ${pkgdir}${MINGW_PREFIX}/etc/gdbinit
-}
-
-package_gcc-libgfortran() {
-  pkgdesc="GNU Compiler Collection (libgfortran) for MinGW-w64"
-  mkdir -p "${pkgdir}${MINGW_PREFIX}/share/licenses/"
-  touch "${pkgdir}${MINGW_PREFIX}/share/licenses/libgfortran-dummy"
 }
 
 package_gcc-fortran() {
