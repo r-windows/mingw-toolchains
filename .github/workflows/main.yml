@@ -26,6 +26,10 @@ jobs:
         ]
     name: ${{ matrix.msystem }}
     runs-on: ${{ github.event.inputs.remove_package && 'windows-2022' || matrix.runner }}
+    env:
+      BUILD_URL: https://github.com/${{github.repository}}/actions/runs/${{github.run_id}}
+      MINGW_ARCH: ${{ matrix.msystem }}
+      PACMAN_REPOSITORY: ${{ matrix.msystem }}-toolchains
     steps:
 
       - name: Kill old processes
@@ -51,18 +55,11 @@ jobs:
       - name: CI-Build
         run: ./ci-build.sh
         if: success() && ! github.event.inputs.remove_package
-        env:
-          BUILD_URL: https://github.com/${{github.repository}}/actions/runs/${{github.run_id}}
-          MINGW_ARCH: ${{ matrix.msystem }}
-          PACMAN_REPOSITORY: ${{ matrix.msystem }}-toolchains
         shell: msys2 {0}
 
       - name: Remove packages
         run: ./ci-remove.sh ${{ github.event.inputs.remove_package }}
         if: github.event.inputs.remove_package
-        env:
-          MINGW_ARCH: ${{ matrix.msystem }}
-          PACMAN_REPOSITORY: ${{ matrix.msystem }}-toolchains
         shell: msys2 {0}
 
       - name: "Upload binary package"
@@ -71,11 +68,6 @@ jobs:
           name: ${{ matrix.msystem }}-toolchains
           path: artifacts/
 
-      # - name: "Upload source package"
-      #   uses: actions/upload-artifact@v2
-      #   with:
-      #     name: sources
-      #     path: sourcepkg/
   deploy:
     name: Deploy to staging server
     runs-on: ubuntu-22.04

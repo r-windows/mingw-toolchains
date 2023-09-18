@@ -10,24 +10,8 @@ pacman --noconfirm -Scc
 pacman --noconfirm -Sy
 
 # Downgrades to be compatible with rtools
-set_arch
 pacman --noconfirm --needed -S git patch make unzip pactoys
-pacman --noconfirm --needed -S mingw-w64-${_arch}-{cc,libtre,pkgconf,xz}
-#wget -nv https://repo.msys2.org/mingw/${MINGW_ARCH}/mingw-w64-${_arch}-headers-git-10.0.0.r0.gaa08f56da-1-any.pkg.tar.zst
-# if [ "$MINGW_ARCH" = "ucrt64" ]; then
-# wget -nv https://repo.msys2.org/mingw/ucrt64/mingw-w64-${_arch}-gcc-12.2.0-9-any.pkg.tar.zst
-# wget -nv https://repo.msys2.org/mingw/ucrt64/mingw-w64-${_arch}-gcc-fortran-12.2.0-9-any.pkg.tar.zst
-# wget -nv https://repo.msys2.org/mingw/ucrt64/mingw-w64-${_arch}-gcc-libs-12.2.0-9-any.pkg.tar.zst
-# wget -nv https://repo.msys2.org/mingw/ucrt64/mingw-w64-${_arch}-gcc-libgfortran-12.2.0-9-any.pkg.tar.zst
-# else
-# wget -nv https://repo.msys2.org/mingw/${MINGW_ARCH}/mingw-w64-${_arch}-clang-16.0.0-1-any.pkg.tar.zst
-# wget -nv https://repo.msys2.org/mingw/${MINGW_ARCH}/mingw-w64-${_arch}-llvm-16.0.0-1-any.pkg.tar.zst
-# wget -nv https://repo.msys2.org/mingw/${MINGW_ARCH}/mingw-w64-${_arch}-compiler-rt-16.0.0-1-any.pkg.tar.zst
-# wget -nv https://repo.msys2.org/mingw/${MINGW_ARCH}/mingw-w64-${_arch}-lld-16.0.0-1-any.pkg.tar.zst
-# wget -nv "https://repo.msys2.org/mingw/${MINGW_ARCH}/mingw-w64-${_arch}-libc%2B%2B-16.0.0-1-any.pkg.tar.zst"
-# fi
-#pacman -U --noconfirm *pkg.tar.zst
-#rm -f *pkg.tar.zst
+pacman --noconfirm -S ${MINGW_PACKAGE_PREFIX}-{cc,libtre,pkgconf,xz}
 
 # Avoid libssp dependency
 sed -i 's/-Wp,-D_FORTIFY_SOURCE=2//g' /etc/makepkg_mingw.conf
@@ -62,13 +46,10 @@ message 'Building packages' "${packages[@]}"
 execute 'Approving recipe quality' check_recipe_quality
 
 # Force static linking (breaks normal msys2 installation!)
-#rm -f /mingw32/lib/*.dll.a
-#rm -f /mingw64/lib/*.dll.a
-#rm -fv /${MINGW_ARCH}/lib/*.dll.a
-#ls -ltr /${MINGW_ARCH}/lib/*.a
-#export PKG_CONFIG="/${MINGW_ARCH}/bin/pkg-config --static"
-export PKGEXT='.pkg.tar.xz'
+export PKG_CONFIG="/${MINGW_ARCH}/bin/pkg-config --static"
+rm -fv /${MINGW_ARCH}/lib/*.dll.a
 
+export PKGEXT='.pkg.tar.xz'
 for package in "${packages[@]}"; do
     # Force static linking by removing import libs from deps
     #execute "Installing build dependencies for $package" makepkg-mingw -seoc --noconfirm
