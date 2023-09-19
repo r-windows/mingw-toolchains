@@ -11,7 +11,7 @@ if [ "$MINGW_ARCH" == "ucrt64" ]; then
   esac
 else
   case $REMOVE_PACKAGE in
-    gcc-libs | gcc-libgfortran )
+    gcc-libs | gcc-libgfortran | libwinpthread-git )
       success "Skipping $REMOVE_PACKAGE for $MINGW_ARCH";;
   esac
 fi

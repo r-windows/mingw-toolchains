@@ -1,6 +1,6 @@
 _realname=winpthreads
 pkgbase=mingw-w64-${_realname}-git
-pkgname=("${MINGW_PACKAGE_PREFIX}-${_realname}-git" "${MINGW_PACKAGE_PREFIX}-libwinpthread-git")
+pkgname=("${MINGW_PACKAGE_PREFIX}-${_realname}-git")
 pkgver=10.0.0.r0.gaa08f56da
 pkgrel=1
 _commit='aa08f56da559016f10336dddca85d59f9bdc9e02'
@@ -58,7 +58,7 @@ build() {
     --host=${MINGW_CHOST} \
     --target=${MINGW_CHOST} \
     --enable-static \
-    --enable-shared \
+    --disable-shared \
     "${extra_config[@]}"
 
   # I failed to figure out how to disable stripping, this
@@ -80,7 +80,7 @@ _install_licenses() {
 }
 
 package_winpthreads-git() {
-  depends=("${MINGW_PACKAGE_PREFIX}-crt-git" "${MINGW_PACKAGE_PREFIX}-libwinpthread-git=${pkgver}")
+  depends=("${MINGW_PACKAGE_PREFIX}-crt-git")
   provides=("${MINGW_PACKAGE_PREFIX}-${_realname}")
   conflicts=("${MINGW_PACKAGE_PREFIX}-${_realname}")
 
@@ -90,19 +90,6 @@ package_winpthreads-git() {
   rm -rf ${pkgdir}${MINGW_PREFIX}/bin
 
   _install_licenses ${_realname}
-}
-
-package_libwinpthread-git() {
-  provides=("${MINGW_PACKAGE_PREFIX}-libwinpthread")
-  conflicts=("${MINGW_PACKAGE_PREFIX}-libwinpthread")
-
-  cd ${srcdir}/build-${MINGW_CHOST}
-  make DESTDIR=${pkgdir} install
-
-  rm -rf ${pkgdir}${MINGW_PREFIX}/include
-  rm -rf ${pkgdir}${MINGW_PREFIX}/lib
-
-  _install_licenses libwinpthread
 }
 
 # template start; name=mingw-w64-splitpkg-wrappers; version=1.0;
