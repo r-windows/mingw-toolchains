@@ -1,0 +1,174 @@
+# Contributor: Mehdi Chinoune <mehdi.chinoune@hotmail.com>
+
+if [[ $MINGW_PACKAGE_PREFIX == *-clang-* ]]; then
+  _clangprefix=1
+fi
+
+_realname=libc++
+pkgbase=mingw-w64-${_realname}
+pkgname=("${MINGW_PACKAGE_PREFIX}-${_realname}"
+         "${MINGW_PACKAGE_PREFIX}-libunwind")
+_version=17.0.1
+_rc=
+_tag=llvmorg-${_version}${_rc}
+pkgver=${_version}${_rc/-/}
+pkgrel=1
+url="https://libcxx.llvm.org/"
+arch=(any)
+mingw_arch=('mingw32' 'mingw64' 'ucrt64' 'clang64' 'clang32' 'clangarm64')
+license=("custom:Apache 2.0 with LLVM Exception")
+groups=($( (( _clangprefix )) && echo "${MINGW_PACKAGE_PREFIX}-toolchain"))
+makedepends=("${MINGW_PACKAGE_PREFIX}-clang"
+             "${MINGW_PACKAGE_PREFIX}-cmake"
+             "${MINGW_PACKAGE_PREFIX}-ninja"
+             "${MINGW_PACKAGE_PREFIX}-lld"
+             "${MINGW_PACKAGE_PREFIX}-compiler-rt"
+             "${MINGW_PACKAGE_PREFIX}-python")
+if [[ ${MINGW_PACKAGE_PREFIX} != *-clang-* ]]; then
+  # GNU's strip breaks the library #11553
+  options=('!strip')
+fi
+_url=https://github.com/llvm/llvm-project/releases/download/${_tag}
+source=("${_url}/libcxx-${pkgver}.src.tar.xz"{,.sig}
+        "${_url}/libcxxabi-${pkgver}.src.tar.xz"{,.sig}
+        "${_url}/libunwind-${pkgver}.src.tar.xz"{,.sig}
+        "${_url}/llvm-${pkgver}.src.tar.xz"{,.sig}
+        "${_url}/cmake-${pkgver}.src.tar.xz"{,.sig}
+        "https://raw.githubusercontent.com/llvm/llvm-project/${_tag}/runtimes/CMakeLists.txt"
+        "https://raw.githubusercontent.com/llvm/llvm-project/${_tag}/runtimes/Components.cmake.in"
+        "https://raw.githubusercontent.com/llvm/llvm-project/${_tag}/runtimes/cmake/Modules/HandleFlags.cmake"
+        "https://raw.githubusercontent.com/llvm/llvm-project/${_tag}/runtimes/cmake/Modules/WarningFlags.cmake")
+sha256sums=('283950b108fd95b99a99a7fd6bd319cde0335187e74a1bf818c680e86dd89f09'
+            'SKIP'
+            '3b9465aaa340e7edcfe2bfae5ff128cc334f16743c21b2f9628e84d180f0c6e5'
+            'SKIP'
+            'faacef65702ea1ce55410f7c7aa7193c1d488a777af7b4aea12d04d12c5619bb'
+            'SKIP'
+            '6acbd59b0a5156b61e82157915ee962a56e13d97aa5fcaa959b68809290893d1'
+            'SKIP'
+            '46e745d9bdcd2e18719a47b080e65fd476e1f6c4bbaa5947e4dee057458b78bc'
+            'SKIP'
+            '9287553565f2ede6a7b8f392b275e437f644d16c8e01ec6a5ce708ad61bccd15'
+            'bc0974b6555874d3c24295fe8b99b25aea8086158ee4ab87e9a8709191cc7824'
+            'a45404becfd848a5d8cb1074f44e32a38d570197479f71df26a56e5a2b075e1b'
+            '7bc97fa37f0bce7860e810c0743acd15f33ecff2612a8589c79431a9b3aada01')
+validpgpkeys=('B6C8F98282B944E3B0D5C2530FC3042E345AD05D'  # Hans Wennborg, Google.
+              '474E22316ABF4785A88C6E8EA2C794A986419D8A'  # Tom Stellard
+              'D574BD5D1D0E98895E3BF90044F2485E45D59042') # Tobias Hieta
+noextract=(libcxx-${pkgver}.src.tar.xz)
+
+prepare() {
+  plain "Extracting libcxx-${pkgver}.src.tar.xz due to symlink(s) without pre-existing target(s)"
+  cd "${srcdir}"
+  tar -xJf ${srcdir}/libcxx-${pkgver}.src.tar.xz -C ${srcdir} || true
+  # Rename Directories
+  for pkg in llvm cmake libcxx libcxxabi libunwind; do
+    mv ${pkg}-$pkgver.src ${pkg}
+  done
+  rm -rf runtimes && mkdir -p runtimes
+  mv CMakeLists.txt runtimes/
+  mv Components.cmake.in runtimes/
+  mkdir -p runtimes/cmake/Modules
+  mv HandleFlags.cmake runtimes/cmake/Modules/
+  mv WarningFlags.cmake runtimes/cmake/Modules/
+}
+
+build() {
+
+  if check_option "debug" "y"; then
+    _build_type="Debug"
+  else
+    _build_type="Release"
+  fi
+
+  # Targeting Win 7 will just lead to libc++ looking
+  # up new APIs at runtime, so there is no downside really
+  local _win32_winnt
+  if [[ ${MSYSTEM} == CLANGARM64 ]]; then
+      _win32_winnt=0xA00 # Windows 10
+  else
+      _win32_winnt=0x601 # Windows 7
+  fi
+
+  local -a libcxx_config
+  if (( _clangprefix )); then
+    libcxx_config+=(-DLIBCXX_USE_COMPILER_RT=ON
+      -DLIBCXXABI_USE_COMPILER_RT=ON
+      -DLIBCXXABI_USE_LLVM_UNWINDER=ON)
+  fi
+
+  libcxx_config+=(-DCMAKE_AR="${MINGW_PREFIX}/bin/llvm-ar.exe"
+    -DCMAKE_ASM_COMPILER="${MINGW_PREFIX}/bin/clang.exe"
+    -DCMAKE_C_COMPILER="${MINGW_PREFIX}/bin/clang.exe"
+    -DCMAKE_CXX_COMPILER="${MINGW_PREFIX}/bin/clang++.exe"
+    -DCMAKE_RANLIB="${MINGW_PREFIX}/bin/llvm-ranlib.exe"
+    -DCMAKE_CXX_FLAGS="-D_WIN32_WINNT=${_win32_winnt}"
+    -DLIBCXX_ENABLE_STATIC_ABI_LIBRARY=ON
+    -DLIBCXX_HAS_WIN32_THREAD_API=ON
+    -DLIBCXX_INCLUDE_BENCHMARKS=OFF
+    -DLIBCXXABI_HAS_WIN32_THREAD_API=ON
+    -DLIBCXXABI_ENABLE_SHARED=OFF
+    -DLIBCXXABI_ENABLE_STATIC=ON
+    -DLIBUNWIND_USE_COMPILER_RT=ON
+    -DLLVM_ENABLE_LLD=ON
+    -DLLVM_ENABLE_RUNTIMES="libcxx;libcxxabi;libunwind")
+
+  cd ${srcdir}
+  mkdir build-${MSYSTEM} && cd build-${MSYSTEM}
+
+  MSYS2_ARG_CONV_EXCL="-DCMAKE_INSTALL_PREFIX=" \
+  ${MINGW_PREFIX}/bin/cmake.exe \
+    -GNinja \
+    -DCMAKE_BUILD_TYPE=${_build_type} \
+    -DCMAKE_INSTALL_PREFIX=${MINGW_PREFIX} \
+    -DCMAKE_SYSTEM_IGNORE_PATH=/usr/lib \
+    -DLLVM_HOST_TRIPLE="${CARCH}-w64-windows-gnu" \
+    -DPython3_EXECUTABLE=${MINGW_PREFIX}/bin/python.exe \
+    -DPython3_FIND_REGISTRY=NEVER \
+    -DPython3_ROOT_DIR=${MINGW_PREFIX} \
+    -DLIBCXX_ENABLE_SHARED=ON \
+    -DLIBCXX_ENABLE_STATIC=ON \
+    -DLIBCXXABI_ENABLE_STATIC_UNWINDER=ON \
+    -DLIBUNWIND_ENABLE_SHARED=ON \
+    -DLIBUNWIND_ENABLE_STATIC=ON \
+    "${libcxx_config[@]}" \
+    -Wno-dev \
+    ../runtimes
+
+  ${MINGW_PREFIX}/bin/cmake --build . -- unwind cxxabi cxx cxx_experimental
+}
+
+package_libc++() {
+  pkgdesc="C++ Standard Library (mingw-w64)"
+  url="https://libcxx.llvm.org/"
+  provides=("${MINGW_PACKAGE_PREFIX}-libc++abi"
+            $( (( _clangprefix )) && echo \
+             "${MINGW_PACKAGE_PREFIX}-gcc-libs" \
+             || true))
+  conflicts=("${MINGW_PACKAGE_PREFIX}-libc++abi")
+  replaces=("${MINGW_PACKAGE_PREFIX}-libc++abi")
+  depends=($( (( _clangprefix )) && echo \
+             "${MINGW_PACKAGE_PREFIX}-libunwind" \
+             || echo "${MINGW_PACKAGE_PREFIX}-gcc-libs"))
+
+  DESTDIR="${pkgdir}" ${MINGW_PREFIX}/bin/cmake --build "${srcdir}/build-${MSYSTEM}" --target install-cxx install-cxxabi
+}
+
+package_libunwind() {
+  pkgdesc='A new implementation of a stack unwinder for C++ exceptions (mingw-w64)'
+  url='https://llvm.org/'
+  depends=($( (( _clangprefix )) || echo "${MINGW_PACKAGE_PREFIX}-gcc-libs"))
+
+  DESTDIR="${pkgdir}" cmake --build "${srcdir}/build-${MSYSTEM}" --target install-unwind
+}
+
+# template start; name=mingw-w64-splitpkg-wrappers; version=1.0;
+# vim: set ft=bash :
+
+# generate wrappers
+for _name in "${pkgname[@]}"; do
+  _short="package_${_name#${MINGW_PACKAGE_PREFIX}-}"
+  _func="$(declare -f "${_short}")"
+  eval "${_func/#${_short}/package_${_name}}"
+done
+# template end;
