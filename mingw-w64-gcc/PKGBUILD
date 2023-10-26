@@ -376,8 +376,7 @@ package_gcc() {
 
 package_gcc-fortran() {
   pkgdesc="GNU Compiler Collection (Fortran) for MinGW-w64"
-  depends=("${MINGW_PACKAGE_PREFIX}-${_realname}=${pkgver}-${pkgrel}"
-           "${MINGW_PACKAGE_PREFIX}-${_realname}-libgfortran=${pkgver}-${pkgrel}")
+  depends=("${MINGW_PACKAGE_PREFIX}-${_realname}=${pkgver}-${pkgrel}")
   provides=("${MINGW_PACKAGE_PREFIX}-fc")
 
   mkdir -p ${pkgdir}${MINGW_PREFIX}/{bin,lib,share}
